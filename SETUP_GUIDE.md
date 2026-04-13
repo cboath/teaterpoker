@@ -13,13 +13,13 @@ A complete Texas Hold'em poker league standings web application built with React
 
 1. **Install Backend Dependencies**
 ```bash
-cd /home/runner/work/teaterpoker/teaterpoker/server
+cd server
 npm install
 ```
 
 2. **Install Frontend Dependencies**
 ```bash
-cd /home/runner/work/teaterpoker/teaterpoker/client
+cd client
 npm install
 ```
 
