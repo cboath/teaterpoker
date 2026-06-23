@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 export interface Tournament {
   id: string;
   name: string;
@@ -12,6 +15,7 @@ export interface TournamentResult {
   playerName: string;
   points: number;
   bounties?: number;
+  eliminationPosition?: number;
 }
 
 export interface Player {
@@ -49,7 +53,9 @@ export const pointsByPlacement: Record<number, number> = {
   8: 1,
 };
 
-const players: Player[] = [
+const DATA_FILE = path.join(__dirname, "../../data/league-data.json");
+
+const seedPlayers: Player[] = [
   { id: "1", name: "Alex Chen" },
   { id: "2", name: "Maria Garcia" },
   { id: "3", name: "James Mitchell" },
@@ -62,7 +68,7 @@ const players: Player[] = [
   { id: "10", name: "Olivia Brown" },
 ];
 
-const tournaments: Tournament[] = [
+const seedTournaments: Tournament[] = [
   { id: "t1", name: "Tournament 1 - Season Opener", date: "2024-01-15", buyIn: 50, players: 10 },
   { id: "t2", name: "Tournament 2 - Winter Challenge", date: "2024-01-29", buyIn: 75, players: 10 },
   { id: "t3", name: "Tournament 3 - February Finals", date: "2024-02-12", buyIn: 50, players: 10 },
@@ -73,7 +79,7 @@ const tournaments: Tournament[] = [
   { id: "t8", name: "Tournament 8 - Season Finale", date: "2024-04-22", buyIn: 100, players: 10 },
 ];
 
-const results: Map<string, TournamentResult[]> = new Map([
+const seedResults: [string, TournamentResult[]][] = [
   [
     "t1",
     [
@@ -194,7 +200,41 @@ const results: Map<string, TournamentResult[]> = new Map([
       { placement: 10, playerId: "10", playerName: "Olivia Brown", points: 0, bounties: 0 },
     ],
   ],
-]);
+];
+
+let players: Player[] = seedPlayers;
+let tournaments: Tournament[] = seedTournaments;
+let results: Map<string, TournamentResult[]> = new Map(seedResults);
+
+interface PersistedShape {
+  players: Player[];
+  tournaments: Tournament[];
+  results: [string, TournamentResult[]][];
+}
+
+function saveData(): void {
+  const payload: PersistedShape = {
+    players,
+    tournaments,
+    results: Array.from(results.entries()),
+  };
+  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+  fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2));
+}
+
+function loadData(): void {
+  if (fs.existsSync(DATA_FILE)) {
+    const raw = fs.readFileSync(DATA_FILE, "utf-8");
+    const parsed: PersistedShape = JSON.parse(raw);
+    players = parsed.players;
+    tournaments = parsed.tournaments;
+    results = new Map(parsed.results);
+  } else {
+    saveData();
+  }
+}
+
+loadData();
 
 export function getLeagueData(): LeagueData {
   return {
@@ -221,6 +261,7 @@ export function calculateStandings(): Standing[] {
   results.forEach((tournamentResults) => {
     tournamentResults.forEach((result) => {
       const stats = playerStats[result.playerId];
+      if (!stats) return;
       stats.totalPoints += result.points;
       stats.placements.push(result.placement);
 
@@ -263,4 +304,79 @@ export function calculateStandings(): Standing[] {
   });
 
   return standings;
+}
+
+// --- Admin mutation functions ---
+
+export function addTournament(input: Omit<Tournament, "id">): Tournament {
+  const id = `t${Date.now()}`;
+  const tournament: Tournament = { id, ...input };
+  tournaments.push(tournament);
+  results.set(id, []);
+  saveData();
+  return tournament;
+}
+
+export function updateTournament(id: string, input: Partial<Omit<Tournament, "id">>): Tournament | null {
+  const tournament = tournaments.find((t) => t.id === id);
+  if (!tournament) return null;
+  Object.assign(tournament, input);
+  saveData();
+  return tournament;
+}
+
+export function deleteTournament(id: string): boolean {
+  const index = tournaments.findIndex((t) => t.id === id);
+  if (index === -1) return false;
+  tournaments.splice(index, 1);
+  results.delete(id);
+  saveData();
+  return true;
+}
+
+export function setTournamentResults(tournamentId: string, newResults: TournamentResult[]): TournamentResult[] | null {
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) return null;
+  results.set(tournamentId, newResults);
+  saveData();
+  return newResults;
+}
+
+export function addPlayer(name: string): Player {
+  const id = `p${Date.now()}`;
+  const player: Player = { id, name };
+  players.push(player);
+  saveData();
+  return player;
+}
+
+export function updatePlayer(id: string, name: string): Player | null {
+  const player = players.find((p) => p.id === id);
+  if (!player) return null;
+  player.name = name;
+  // Keep denormalized playerName in results in sync
+  results.forEach((tournamentResults) => {
+    tournamentResults.forEach((result) => {
+      if (result.playerId === id) {
+        result.playerName = name;
+      }
+    });
+  });
+  saveData();
+  return player;
+}
+
+export function playerHasResults(id: string): boolean {
+  for (const tournamentResults of results.values()) {
+    if (tournamentResults.some((r) => r.playerId === id)) return true;
+  }
+  return false;
+}
+
+export function deletePlayer(id: string): boolean {
+  const index = players.findIndex((p) => p.id === id);
+  if (index === -1) return false;
+  players.splice(index, 1);
+  saveData();
+  return true;
 }
