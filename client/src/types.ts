@@ -29,6 +29,7 @@ export interface TournamentResult {
   playerName: string;
   points: number;
   bounties?: number;
+  eliminationPosition?: number;
 }
 
 export interface TournamentDetails {

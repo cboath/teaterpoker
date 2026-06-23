@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -8,10 +8,13 @@ import {
   Container,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material'
-import CasinoIcon from '@mui/icons-material/Casino'
 import StandingsTable from './components/StandingsTable'
 import TournamentResultsTable from './components/TournamentResultsTable'
+import AdminLoginDialog from './components/AdminLoginDialog'
+import AdminPanel from './components/AdminPanel'
+import { useAdmin } from './AdminContext'
 import { Standing, Tournament } from './types'
 
 interface TabPanelProps {
@@ -36,11 +39,18 @@ function TabPanel(props: TabPanelProps) {
 }
 
 function App() {
+  const { isAdmin, logout } = useAdmin()
   const [tabValue, setTabValue] = useState(0)
   const [standings, setStandings] = useState<Standing[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [loginOpen, setLoginOpen] = useState(false)
+
+  const players = useMemo(
+    () => standings.map((s) => ({ id: s.playerId, name: s.name })),
+    [standings]
+  )
 
   useEffect(() => {
     fetchData()
@@ -77,16 +87,37 @@ function App() {
     setTabValue(newValue)
   }
 
+  const handleLogout = () => {
+    logout()
+    setTabValue(0)
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
       <AppBar position="static">
         <Toolbar>
-          <CasinoIcon sx={{ mr: 2, fontSize: '2rem' }} />
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>
+          <Box sx={{ display: 'flex', gap: '2px', mr: 2, fontSize: '1.6rem', lineHeight: 1 }}>
+            <span style={{ color: '#d4a574' }}>♠</span>
+            <span style={{ color: '#ef5350' }}>♥</span>
+            <span style={{ color: '#ef5350' }}>♦</span>
+            <span style={{ color: '#d4a574' }}>♣</span>
+          </Box>
+          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, flexGrow: 1 }}>
             Teater Poker League Donkies
           </h1>
+          {isAdmin ? (
+            <Button color="inherit" onClick={handleLogout}>
+              Log Out
+            </Button>
+          ) : (
+            <Button color="inherit" onClick={() => setLoginOpen(true)}>
+              Admin Login
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
+
+      <AdminLoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {error && (
@@ -114,6 +145,7 @@ function App() {
           >
             <Tab label="Standings" id="tab-0" aria-controls="tabpanel-0" />
             <Tab label="Tournament Results" id="tab-1" aria-controls="tabpanel-1" />
+            {isAdmin && <Tab label="Admin" id="tab-2" aria-controls="tabpanel-2" />}
           </Tabs>
         </Box>
 
@@ -129,6 +161,11 @@ function App() {
             <TabPanel value={tabValue} index={1}>
               <TournamentResultsTable tournaments={tournaments} />
             </TabPanel>
+            {isAdmin && (
+              <TabPanel value={tabValue} index={2}>
+                <AdminPanel players={players} tournaments={tournaments} onRefresh={fetchData} />
+              </TabPanel>
+            )}
           </>
         )}
       </Container>

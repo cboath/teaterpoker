@@ -103,6 +103,15 @@ export default function TournamentResultsTable({
           return bounties > 0 ? `💰 ${bounties}` : '-'
         },
       },
+      {
+        field: 'eliminationPosition',
+        headerName: 'Elimination #',
+        width: 130,
+        sortable: false,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => params.row.eliminationPosition ?? '-',
+      },
     ],
     []
   )

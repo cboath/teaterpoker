@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import App from './App.tsx'
+import { AdminProvider } from './AdminContext'
 import './index.css'
 
 const darkTheme = createTheme({
@@ -57,7 +58,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <App />
+      <AdminProvider>
+        <App />
+      </AdminProvider>
     </ThemeProvider>
   </React.StrictMode>,
 )
