@@ -83,7 +83,7 @@ function App() {
         <Toolbar>
           <CasinoIcon sx={{ mr: 2, fontSize: '2rem' }} />
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>
-            Teater Poker League
+            Teater Poker League Donkies
           </h1>
         </Toolbar>
       </AppBar>
